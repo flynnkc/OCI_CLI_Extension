@@ -1,9 +1,9 @@
 #!/bin/bash
-### Dependancies ###
-# OCI_CLI 2.6.5
-# jq-1.6
+### Dependencies ###
+# OCI_CLI 2.6.5    https://docs.cloud.oracle.com/iaas/Content/API/Concepts/cliconcepts.htm
+# jq-1.6    https://stedolan.github.io/jq/
 
-### VARS ###
+### GLOBAL VARS ###
 # COMPART - Array - Hold compartment IDs
 
 COMPART=( )
@@ -28,7 +28,8 @@ echo "|   | _____/ ____\___________              "
 echo '|   |/    \   __\\_  __ \__  \             '
 echo "|   |   |  \  |   |  | \/ __ \_           "
 echo "|___|___|  /__|   |__|  (____  /           "
-echo "         \/                  \/            \n"
+echo "         \/                  \/            "
+echo
 }
 
 # User selects what they want to do
@@ -40,24 +41,26 @@ function startMainLoop() {
 
     echo 'What would you like to do?'
     echo '1: List resources in tenancy'
+	echo '2: List compartments in tenancy'
     echo 'q: Quit'
     read -r -n 1 -p 'Enter your selection here: ' ANSWER
 
     case $ANSWER in
 
         1)
-            echo "\n"
+            echo 
             listResources
             ;;
-        t)
-            #getCompartments
+        2)
+			echo
             for i in ${COMPART[@]}; do
                 echo $i
             done
             startMainLoop
             ;;
         *)
-            echo '\nGoodbye!'
+			echo
+            echo 'Goodbye!'
             return 0
             ;;
     esac
@@ -65,7 +68,8 @@ function startMainLoop() {
 
 # Get list of compartments and save them to array
 function getCompartments() {
-    echo "Searching for compartments...\n"
+	# TODO Need to get tenancy id as well
+	echo 'Searching for compartments...'
     # Get list of compartments in tenancy where lifecycle-state is not DELETED and assign to $COMPART
     while IFS="\n" read -r line; do 
         COMPART+=( "${line:1:${#line}-2}" )
@@ -87,29 +91,28 @@ function listResources() {
     case $ANSWER in
 
         1)
-            #TODO
-            echo $ANSWER
-            startMainLoop
-            ;;
+            echo
+            listCompute
+			;;
         2)
-            echo '\n'
+            echo
             listADB 'DW'
             ;;
         3)
-            echo '\n'
+            echo
             listADB 'OLTP'
             ;;
         4)
-            #TODO
-            echo $ANSWER
-            startMainLoop
-            ;;
+            echo
+            listLoadBalancer
+			;;
         r)
-            echo "\n"
+            echo
             startMainLoop
             ;;
         *)
-            echo "\nGoodbye!"
+			echo
+            echo "Goodbye!"
             return 0
             ;;
         esac
@@ -124,6 +127,23 @@ function listADB() {
     listResources
 }
 
+# Find all computes in tenancy
+function listCompute() {
+	for i in "${COMPART[@]}"; do
+		oci compute instance list -c $i | jq '.data[]'
+	done
+	echo "### Finished! ###"
+	listResources
+}
+
+# Find load balancers in tenancy
+function listLoadBalancer() {
+	for i in "${COMPART[@]}"; do
+		oci lb load-balancer list -c $i | jq '.data[]'
+	done
+	echo "### Finished! ###"
+	listResources
+}
 
 ### START MAIN ###
 renderLogo
